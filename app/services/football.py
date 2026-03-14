@@ -119,7 +119,7 @@ async def get_fixtures_today(league_id: Optional[int] = None) -> List[Dict]:
 
 
 async def get_standings(league_id: int, season: Optional[int] = None) -> List[Dict]:
-    season = season or datetime.now().year
+    season = season or (datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1)
     cache_key = f"standings:{league_id}:{season}"
     cached = await cache_get(cache_key)
     if cached:
@@ -152,7 +152,7 @@ async def get_standings(league_id: int, season: Optional[int] = None) -> List[Di
 
 
 async def get_top_scorers(league_id: int, season: Optional[int] = None) -> List[Dict]:
-    season = season or datetime.now().year
+    season = season or (datetime.now().year if datetime.now().month >= 8 else datetime.now().year - 1)
     cache_key = f"scorers:{league_id}:{season}"
     cached = await cache_get(cache_key)
     if cached:
@@ -246,3 +246,4 @@ def _mock_live_scores() -> List[Dict]:
             ],
         },
     ]
+
