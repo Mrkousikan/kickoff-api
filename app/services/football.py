@@ -169,7 +169,7 @@ def _mock_live_scores() -> List[Dict]:
         },
     ]
 
-async def get_match_detail(match_id: int) -> dict:
+
     cache_key = f'match:{match_id}'
     cached = await cache_get(cache_key)
     if cached:
@@ -217,7 +217,7 @@ async def get_match_detail(match_id: int) -> dict:
     await cache_set(cache_key, result, 60)
     return result
 
-async def get_match_detail(match_id: int) -> dict:
+
     cache_key = f'match:{match_id}'
     cached = await cache_get(cache_key)
     if cached:
@@ -264,3 +264,88 @@ async def get_match_detail(match_id: int) -> dict:
     }
     await cache_set(cache_key, result, 60)
     return result
+
+
+async def get_match_detail(match_id: int) -> dict:
+    cache_key = f'match:{match_id}'
+    cached = await cache_get(cache_key)
+    if cached:
+        return cached
+    data = await _fetch(f'matches/{match_id}')
+    if not data or 'id' not in data:
+        mock = _mock_match_detail(match_id)
+        return mock
+    m = data
+    home = m.get('homeTeam', {})
+    away = m.get('awayTeam', {})
+    score = m.get('score', {})
+    ft = score.get('fullTime', {})
+    ht = score.get('halfTime', {})
+    status = m.get('status', 'SCHEDULED')
+    short = 'NS'
+    if status == 'IN_PLAY': short = '1H'
+    elif status == 'PAUSED': short = 'HT'
+    elif status == 'FINISHED': short = 'FT'
+    goals = m.get('goals', [])
+    bookings = m.get('bookings', [])
+    substitutions = m.get('substitutions', [])
+    events = []
+    for g in goals:
+        events.append({'minute': g.get('minute', 0), 'type': 'Goal', 'team': g.get('team', {}).get('name', ''), 'player': g.get('scorer', {}).get('name', ''), 'detail': 'Normal Goal'})
+    for b in bookings:
+        events.append({'minute': b.get('minute', 0), 'type': 'Card', 'team': b.get('team', {}).get('name', ''), 'player': b.get('player', {}).get('name', ''), 'detail': b.get('card', '')})
+    events.sort(key=lambda x: x['minute'])
+    result = {
+        'fixture': {'id': m.get('id', 0), 'date': m.get('utcDate', ''), 'venue': m.get('venue', ''), 'status': {'long': status, 'short': short, 'elapsed': None}},
+        'home_team': {'id': home.get('id', 0), 'name': home.get('name', ''), 'logo': home.get('crest', '')},
+        'away_team': {'id': away.get('id', 0), 'name': away.get('name', ''), 'logo': away.get('crest', '')},
+        'goals': {'home': ft.get('home'), 'away': ft.get('away')},
+        'half_time': {'home': ht.get('home'), 'away': ht.get('away')},
+        'league_name': m.get('competition', {}).get('name', ''),
+        'league_logo': m.get('competition', {}).get('emblem', ''),
+        'events': events,
+        'home_lineup': [],
+        'away_lineup': [],
+        'referee': m.get('referees', [{}])[0].get('name', '') if m.get('referees') else '',
+    }
+    await cache_set(cache_key, result, 60)
+    return result
+
+def _mock_match_detail(match_id: int) -> dict:
+    mocks = {
+        1001: {
+            'fixture': {'id': 1001, 'date': '2025-03-14T18:00:00+00:00', 'venue': 'Old Trafford', 'status': {'long': 'First Half', 'short': '1H', 'elapsed': 34}},
+            'home_team': {'id': 33, 'name': 'Manchester United', 'logo': 'https://crests.football-data.org/66.png'},
+            'away_team': {'id': 40, 'name': 'Liverpool', 'logo': 'https://crests.football-data.org/64.png'},
+            'goals': {'home': 1, 'away': 2},
+            'half_time': {'home': 0, 'away': 1},
+            'league_name': 'Premier League',
+            'league_logo': '',
+            'events': [
+                {'minute': 12, 'type': 'Goal', 'team': 'Liverpool', 'player': 'M. Salah', 'detail': 'Normal Goal'},
+                {'minute': 28, 'type': 'Goal', 'team': 'Manchester United', 'player': 'R. Hojlund', 'detail': 'Normal Goal'},
+                {'minute': 31, 'type': 'Goal', 'team': 'Liverpool', 'player': 'L. Diaz', 'detail': 'Normal Goal'},
+            ],
+            'home_lineup': ['A. Onana','V. Lindelof','H. Maguire','L. Shaw','A. Wan-Bissaka','C. Gallagher','K. McTominay','B. Fernandes','M. Rashford','R. Hojlund','R. Højlund'],
+            'away_lineup': ['A. Becker','T. Alexander-Arnold','V. van Dijk','I. Konate','A. Robertson','W. Endo','D. Mac Allister','A. Jones','M. Salah','D. Nunez','L. Diaz'],
+            'referee': 'M. Oliver',
+        },
+        1002: {
+            'fixture': {'id': 1002, 'date': '2025-03-14T20:00:00+00:00', 'venue': 'Santiago Bernabeu', 'status': {'long': 'Second Half', 'short': '2H', 'elapsed': 67}},
+            'home_team': {'id': 541, 'name': 'Real Madrid', 'logo': 'https://crests.football-data.org/86.png'},
+            'away_team': {'id': 529, 'name': 'Barcelona', 'logo': 'https://crests.football-data.org/81.png'},
+            'goals': {'home': 2, 'away': 1},
+            'half_time': {'home': 1, 'away': 1},
+            'league_name': 'La Liga',
+            'league_logo': '',
+            'events': [
+                {'minute': 22, 'type': 'Goal', 'team': 'Real Madrid', 'player': 'K. Mbappe', 'detail': 'Normal Goal'},
+                {'minute': 45, 'type': 'Goal', 'team': 'Barcelona', 'player': 'R. Lewandowski', 'detail': 'Normal Goal'},
+                {'minute': 58, 'type': 'Goal', 'team': 'Real Madrid', 'player': 'V. Jr.', 'detail': 'Normal Goal'},
+            ],
+            'home_lineup': ['T. Courtois','D. Carvajal','E. Militao','A. Rudiger','F. Mendy','T. Kroos','A. Tchouameni','J. Bellingham','R. Rodrygo','K. Mbappe','V. Jr.'],
+            'away_lineup': ['M. ter Stegen','J. Cancelo','R. Araujo','I. Martinez','A. Balde','F. Gundogan','P. Busquets','Pedri','L. Yamal','R. Lewandowski','R. Ferran'],
+            'referee': 'A. Mateu Lahoz',
+        },
+    }
+    return mocks.get(match_id)
