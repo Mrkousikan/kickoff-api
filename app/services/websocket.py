@@ -52,7 +52,7 @@ manager = ConnectionManager()
 async def live_score_broadcaster():
     """Background task — fetches live scores every 30s and pushes to all WS clients."""
     while True:
-        await asyncio.sleep(30)
+        await asyncio.sleep(300)
         if manager.total_connections() == 0:
             continue
         try:
@@ -62,3 +62,4 @@ async def live_score_broadcaster():
             print(f"[WS] Broadcast live scores to {manager.total_connections()} clients")
         except Exception as e:
             print(f"[WS] Broadcast error: {e}")
+
