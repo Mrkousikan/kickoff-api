@@ -68,3 +68,5 @@ async def health():
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     return JSONResponse(status_code=500, content={"status": "error", "message": str(exc)})
+
+

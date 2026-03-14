@@ -168,3 +168,99 @@ def _mock_live_scores() -> List[Dict]:
             ],
         },
     ]
+
+async def get_match_detail(match_id: int) -> dict:
+    cache_key = f'match:{match_id}'
+    cached = await cache_get(cache_key)
+    if cached:
+        return cached
+    data = await _fetch(f'matches/{match_id}')
+    if not data:
+        return None
+    m = data
+    home = m.get('homeTeam', {})
+    away = m.get('awayTeam', {})
+    score = m.get('score', {})
+    ft = score.get('fullTime', {})
+    ht = score.get('halfTime', {})
+    status = m.get('status', 'SCHEDULED')
+    short = 'NS'
+    if status == 'IN_PLAY': short = '1H'
+    elif status == 'PAUSED': short = 'HT'
+    elif status == 'FINISHED': short = 'FT'
+    goals = m.get('goals', [])
+    bookings = m.get('bookings', [])
+    substitutions = m.get('substitutions', [])
+    events = []
+    for g in goals:
+        events.append({'minute': g.get('minute', 0), 'type': 'Goal', 'team': g.get('team', {}).get('name', ''), 'player': g.get('scorer', {}).get('name', ''), 'detail': 'Normal Goal'})
+    for b in bookings:
+        events.append({'minute': b.get('minute', 0), 'type': 'Card', 'team': b.get('team', {}).get('name', ''), 'player': b.get('player', {}).get('name', ''), 'detail': b.get('card', '')})
+    for s in substitutions:
+        events.append({'minute': s.get('minute', 0), 'type': 'Sub', 'team': s.get('team', {}).get('name', ''), 'player': s.get('playerOut', {}).get('name', ''), 'detail': s.get('playerIn', {}).get('name', '')})
+    events.sort(key=lambda x: x['minute'])
+    home_lineup = [p.get('name', '') for p in m.get('lineups', [{}])[0].get('lineup', []) if m.get('lineups')]
+    away_lineup = [p.get('name', '') for p in m.get('lineups', [{}])[1].get('lineup', []) if len(m.get('lineups', [])) > 1]
+    result = {
+        'fixture': {'id': m.get('id', 0), 'date': m.get('utcDate', ''), 'venue': m.get('venue', ''), 'status': {'long': status, 'short': short, 'elapsed': None}},
+        'home_team': {'id': home.get('id', 0), 'name': home.get('name', ''), 'logo': home.get('crest', '')},
+        'away_team': {'id': away.get('id', 0), 'name': away.get('name', ''), 'logo': away.get('crest', '')},
+        'goals': {'home': ft.get('home'), 'away': ft.get('away')},
+        'half_time': {'home': ht.get('home'), 'away': ht.get('away')},
+        'league_name': m.get('competition', {}).get('name', ''),
+        'league_logo': m.get('competition', {}).get('emblem', ''),
+        'events': events,
+        'home_lineup': home_lineup,
+        'away_lineup': away_lineup,
+        'referee': m.get('referees', [{}])[0].get('name', '') if m.get('referees') else '',
+    }
+    await cache_set(cache_key, result, 60)
+    return result
+
+async def get_match_detail(match_id: int) -> dict:
+    cache_key = f'match:{match_id}'
+    cached = await cache_get(cache_key)
+    if cached:
+        return cached
+    data = await _fetch(f'matches/{match_id}')
+    if not data:
+        return None
+    m = data
+    home = m.get('homeTeam', {})
+    away = m.get('awayTeam', {})
+    score = m.get('score', {})
+    ft = score.get('fullTime', {})
+    ht = score.get('halfTime', {})
+    status = m.get('status', 'SCHEDULED')
+    short = 'NS'
+    if status == 'IN_PLAY': short = '1H'
+    elif status == 'PAUSED': short = 'HT'
+    elif status == 'FINISHED': short = 'FT'
+    goals = m.get('goals', [])
+    bookings = m.get('bookings', [])
+    substitutions = m.get('substitutions', [])
+    events = []
+    for g in goals:
+        events.append({'minute': g.get('minute', 0), 'type': 'Goal', 'team': g.get('team', {}).get('name', ''), 'player': g.get('scorer', {}).get('name', ''), 'detail': 'Normal Goal'})
+    for b in bookings:
+        events.append({'minute': b.get('minute', 0), 'type': 'Card', 'team': b.get('team', {}).get('name', ''), 'player': b.get('player', {}).get('name', ''), 'detail': b.get('card', '')})
+    for s in substitutions:
+        events.append({'minute': s.get('minute', 0), 'type': 'Sub', 'team': s.get('team', {}).get('name', ''), 'player': s.get('playerOut', {}).get('name', ''), 'detail': s.get('playerIn', {}).get('name', '')})
+    events.sort(key=lambda x: x['minute'])
+    home_lineup = [p.get('name', '') for p in m.get('lineups', [{}])[0].get('lineup', []) if m.get('lineups')]
+    away_lineup = [p.get('name', '') for p in m.get('lineups', [{}])[1].get('lineup', []) if len(m.get('lineups', [])) > 1]
+    result = {
+        'fixture': {'id': m.get('id', 0), 'date': m.get('utcDate', ''), 'venue': m.get('venue', ''), 'status': {'long': status, 'short': short, 'elapsed': None}},
+        'home_team': {'id': home.get('id', 0), 'name': home.get('name', ''), 'logo': home.get('crest', '')},
+        'away_team': {'id': away.get('id', 0), 'name': away.get('name', ''), 'logo': away.get('crest', '')},
+        'goals': {'home': ft.get('home'), 'away': ft.get('away')},
+        'half_time': {'home': ht.get('home'), 'away': ht.get('away')},
+        'league_name': m.get('competition', {}).get('name', ''),
+        'league_logo': m.get('competition', {}).get('emblem', ''),
+        'events': events,
+        'home_lineup': home_lineup,
+        'away_lineup': away_lineup,
+        'referee': m.get('referees', [{}])[0].get('name', '') if m.get('referees') else '',
+    }
+    await cache_set(cache_key, result, 60)
+    return result
